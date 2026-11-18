@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f172a">
+  <title>Control de Obra R-O11</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --primary: #0f172a;
+      --accent: #2563eb;
+      --success: #16a34a;
+      --warning: #d97706;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 80px; -webkit-tap-highlight-color: transparent; }
+    
+    /* Header & KPIs */
+    header { background: var(--primary); color: white; padding: 20px 16px 16px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    h1 { font-size: 1.15rem; font-weight: 700; letter-spacing: -0.02em; }
+    .badge-rev { background: rgba(255,255,255,0.15); font-size: 0.7rem; padding: 3px 8px; border-radius: 12px; }
+    
+    .kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .kpi-box { background: rgba(255,255,255,0.08); padding: 10px; border-radius: 10px; text-align: center; }
+    .kpi-val { font-size: 1.25rem; font-weight: 800; color: #38bdf8; }
+    .kpi-lbl { font-size: 0.68rem; color: #cbd5e1; text-transform: uppercase; margin-top: 2px; }
+    
+    /* Progress Bar */
+    .progress-wrap { background: rgba(255,255,255,0.15); height: 6px; border-radius: 3px; margin-top: 12px; overflow: hidden; }
+    .progress-bar { background: #22c55e; height: 100%; width: 0%; transition: width 0.3s ease; }
+
+    /* Filters & Controls */
+    .controls { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--card); border-bottom: 1px solid var(--border); }
+    select, input[type="text"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.9rem; background: #f8fafc; color: var(--text); }
+    .unit-selector { display: none; gap: 8px; align-items: center; }
+    .unit-selector.active { display: flex; }
+
+    /* Main Content */
+    main { padding: 12px 16px; }
+    .section-card { background: var(--card); border-radius: 12px; margin-bottom: 12px; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.03); }
+    .section-header { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #fff; }
+    .section-title { font-weight: 700; font-size: 0.95rem; color: var(--primary); }
+    .section-meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .section-count { background: #eff6ff; color: var(--accent); font-weight: 700; font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; }
+    .section-count.done { background: #dcfce7; color: var(--success); }
+
+    .task-list { display: none; border-top: 1px solid var(--border); }
+    .task-list.open { display: block; }
+    .sub-header { background: #f8fafc; padding: 8px 16px; font-size: 0.78rem; font-weight: 700; color: var(--accent); border-bottom: 1px solid var(--border); text-transform: uppercase; }
+    
+    .task-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; }
+    .task-item:last-child { border-bottom: none; }
+    .task-item:active { background: #f1f5f9; }
+    .task-item input[type="checkbox"] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--success); flex-shrink: 0; }
+    .task-text { font-size: 0.88rem; line-height: 1.4; flex: 1; }
+    .task-item.checked .task-text { text-decoration: line-through; color: var(--muted); }
+    .task-who { font-size: 0.68rem; background: #f1f5f9; color: var(--muted); padding: 2px 6px; border-radius: 4px; font-weight: 600; white-space: nowrap; }
+
+    /* Bottom Navigation */
+    nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); z-index: 100; }
+    .nav-btn { background: none; border: none; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 0.72rem; font-weight: 600; cursor: pointer; padding: 4px 12px; }
+    .nav-btn.active { color: var(--accent); }
+    .nav-icon { font-size: 1.2rem; }
+
+    /* Export button */
+    .btn-export { background: var(--accent); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div>
+      <h1>Control de Obra</h1>
+      <span class="badge-rev">R-O11 • Rev. 01</span>
+    </div>
+    <button class="btn-export" onclick="exportarReporte()">Exportar CSV</button>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-box">
+      <div class="kpi-val" id="kpi-pct">0%</div>
+      <div class="kpi-lbl">Avance Total</div>
+    </div>
+    <div class="kpi-box">
+      <div class="kpi-val" id="kpi-done" style="color:#4ade80">0</div>
+      <div class="kpi-lbl">Aprobadas</div>
+    </div>
+    <div class="kpi-box">
+      <div class="kpi-val" id="kpi-pend" style="color:#fbbf24">0</div>
+      <div class="kpi-lbl">Pendientes</div>
+    </div>
+  </div>
+  <div class="progress-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+</header>
+
+<div class="controls">
+  <div class="unit-selector" id="unit-selector-wrap">
+    <label style="font-size:0.85rem; font-weight:700; white-space:nowrap;">Unidad:</label>
+    <select id="unit-select" onchange="render()">
+      <option value="1A">Depto 1A</option><option value="1B">Depto 1B</option><option value="1C">Depto 1C</option><option value="1D">Depto 1D</option>
+      <option value="2A">Depto 2A</option><option value="2B">Depto 2B</option><option value="2C">Depto 2C</option><option value="2D">Depto 2D</option>
+      <option value="3A">Depto 3A</option><option value="3B">Depto 3B</option><option value="3C">Depto 3C</option><option value="3D">Depto 3D</option>
+      <option value="4A">Depto 4A</option><option value="4B">Depto 4B</option><option value="4C">Depto 4C</option>
+    </select>
+  </div>
+  <input type="text" id="search-input" placeholder="Buscar tarea, plano o rubro..." onkeyup="render()">
+</div>
+
+<main id="app-container"></main>
+
+<nav>
+  <button class="nav-btn active" onclick="setTab('general', this)">
+    <span class="nav-icon">🏗️</span>
+    <span>Obra General</span>
+  </button>
+  <button class="nav-btn" onclick="setTab('humedos', this)">
+    <span class="nav-icon">🚿</span>
+    <span>Locales Húmedos</span>
+  </button>
+  <button class="nav-btn" onclick="setTab('unidades', this)">
+    <span class="nav-icon">🔑</span>
+    <span>Puesta a Punto</span>
+  </button>
+</nav>
+
+<script>
+const DB = {
+  general: [
+    {
+      id: "seg", title: "SEGURIDAD E HIGIENE", subs: [
+        { name: "Controles Generales", tasks: [
+          { t: "Controlar correcto azotado en picado de medianeras para elementos estructurales", w: "Obra" },
+          { t: "Control de bandeja fija a 3m de la vereda", w: "Obra" },
+          { t: "Control de bandeja móvil 2 pisos por debajo de donde se está trabajando", w: "Obra" },
+          { t: "Control de línea de vida y mediasombras previo al hormigón", w: "Obra" },
+          { t: "Control barandas internas (huecos de escalera y patios)", w: "Obra" },
+          { t: "Control barandas perimetrales", w: "Obra" }
+        ]}
+      ]
+    },
+    {
+      id: "00", title: "00 • Tareas Preliminares de Obra", subs: [
+        { name: "00-01 Plano de Mensura y Amojonamiento", tasks: [
+          { t: "Niveles de Vereda. Revisar diferencias entre líneas medianeras (Agrimensor)", w: "Agrimensor" },
+          { t: "Composición de medianeras. Espesores y altos", w: "Obra" },
+          { t: "Medidas precisas del lote", w: "Obra" },
+          { t: "Relevamiento fachada linderos (edificio con resguardo patrimonial)", w: "Diseño" }
+        ]},
+        { name: "00-02 Plano de Relevamiento de Vereda", tasks: [
+          { t: "Posición de árboles, salidas pluviales, medidores de agua y cámaras", w: "Obra" },
+          { t: "Obturación medidor de Gas y posición de conexión a cloaca", w: "Obra" },
+          { t: "Controlar cableado aéreo, altura del cordón y movimiento de ménsulas", w: "Obra" },
+          { t: "Verificar tablero EPE provisorio (que no entorpezca salida de camiones) y bajas", w: "Obra" }
+        ]},
+        { name: "00-03/04/05/06 Cerco, Obrador, Replanteo y Vallas", tasks: [
+          { t: "Cerco de obra: ancho de paso mín. 1m, portones, palo cajón y rampa subsuelo", w: "Obra" },
+          { t: "Obrador y baño: conexión a cloaca y circulación sin obstruir excavación", w: "Obra" },
+          { t: "Ejes de replanteo: acordados con Agrimensor/Civil, medidas redondas sin cruzar estructura", w: "Diseño" },
+          { t: "Vallas reglamentarias: N° de demolición y N° de permiso de edificación", w: "Obra" }
+        ]}
+      ]
+    },
+    {
+      id: "01", title: "01 • Movimientos de Suelos", subs: [
+        { name: "Excavación, Submuración, Pilotes y Cabezales", tasks: [
+          { t: "01-01 Excavación: medidas desde ejes de replanteo y profundidades desde nivel 0", w: "Obra" },
+          { t: "01-02 Troneras y Submuración: secuencia numerada y control de apuntalamiento", w: "Obra" },
+          { t: "01-03 Pilotes: medidas, profundidades por familia y control de armaduras", w: "Obra/Ing" },
